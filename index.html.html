@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="theme-color" content="#070707"/>
+<title>The Wolf</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:#070707;font-family:'Georgia',serif;color:#e0d8c8;overflow:hidden;}
+  #app{height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+  #sphere-wrap{position:relative;z-index:10;background:rgba(7,7,7,0.99);border-bottom:1px solid rgba(200,168,75,0.08);flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:10px 0 4px;flex:1;justify-content:center;}
+  #sphere-header{display:flex;width:100%;align-items:center;padding:0 16px 6px;}
+  #sphere-title{font-size:13px;font-weight:700;letter-spacing:0.14em;color:#c8a84b;}
+  #sphere-status{margin-left:auto;font-size:10px;font-family:monospace;display:flex;align-items:center;gap:5px;height:16px;}
+  #status-dot{width:5px;height:5px;border-radius:50%;display:none;}
+  canvas{display:block;}
+  #key-panel{background:rgba(18,18,18,0.99);border-bottom:1px solid #1e1e1e;padding:12px 16px;display:none;}
+  #key-panel p{font-size:11px;color:#888;margin-bottom:8px;line-height:1.5;}
+  #key-panel a{color:#c8a84b;text-decoration:none;}
+  #key-row{display:flex;gap:8px;}
+  #key-input{flex:1;background:rgba(255,255,255,0.05);border:1px solid #333;border-radius:8px;padding:8px 12px;color:#e0d8c8;font-size:13px;outline:none;font-family:monospace;}
+  #key-ok{background:linear-gradient(135deg,#c8a84b,#8b6914);border:none;border-radius:8px;padding:8px 14px;color:#000;font-weight:700;cursor:pointer;font-size:12px;}
+  #key-btn{font-size:10px;background:none;border:1px solid #222;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:monospace;}
+  #error-bar{display:none;background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);margin:8px 12px;border-radius:8px;padding:8px 12px;font-size:12px;color:#e57373;align-items:center;justify-content:space-between;}
+  #error-close{background:none;border:none;color:#e57373;cursor:pointer;font-size:18px;line-height:1;}
+  #messages{overflow-y:auto;padding:4px 12px 0;max-height:35vh;}
+  #messages::-webkit-scrollbar{width:3px;}
+  #messages::-webkit-scrollbar-thumb{background:rgba(200,168,75,0.15);border-radius:4px;}
+
+  #msg-list{max-width:580px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding-bottom:8px;}
+  .msg-row{display:flex;align-items:flex-end;gap:7px;animation:fadeUp 0.3s ease;}
+  .msg-row.user{flex-direction:row-reverse;}
+  .avatar{width:24px;height:24px;border-radius:50%;flex-shrink:0;background:radial-gradient(circle at 35% 35%,rgba(200,168,75,0.95),rgba(100,80,10,0.6));border:1px solid rgba(200,168,75,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;}
+  .bubble{max-width:82%;padding:9px 13px;font-size:13px;line-height:1.7;}
+  .bubble.user{background:linear-gradient(135deg,rgba(200,168,75,0.14),rgba(200,168,75,0.06));border:1px solid rgba(200,168,75,0.25);border-radius:13px 13px 3px 13px;color:#e0d8c8;}
+  .bubble.assistant{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:13px 13px 13px 3px;color:#cbc3b2;}
+  .bubble strong{color:#c8a84b;}
+  #typing{display:none;align-items:flex-end;gap:7px;}
+  #typing-avatar{width:24px;height:24px;border-radius:50%;flex-shrink:0;background:radial-gradient(circle at 35% 35%,rgba(80,180,255,0.9),rgba(20,60,130,0.5));border:1px solid rgba(80,180,255,0.3);animation:blink 1s infinite;}
+  #typing-dots{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:13px 13px 13px 3px;padding:10px 14px;display:flex;gap:5px;}
+  .dot{width:5px;height:5px;border-radius:50%;background:#50b4ff;animation:bounce 1.2s ease infinite;}
+  #input-bar{position:relative;z-index:10;padding:10px 12px 28px;border-top:1px solid rgba(200,168,75,0.1);background:rgba(7,7,7,0.99);flex-shrink:0;}
+  #input-row{max-width:580px;margin:0 auto;display:flex;gap:8px;align-items:flex-end;}
+  #text-input{flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(200,168,75,0.18);border-radius:13px;padding:11px 13px;color:#e0d8c8;font-size:14px;font-family:'Georgia',serif;outline:none;resize:none;line-height:1.5;max-height:100px;overflow-y:auto;transition:border-color 0.2s;}
+  #text-input:focus{border-color:rgba(200,168,75,0.5);}
+  #text-input::placeholder{color:#444;}
+  #send-btn{width:43px;height:43px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#c8a84b,#8b6914);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:19px;box-shadow:0 0 14px rgba(200,168,75,0.4);}
+  #mic-btn{width:43px;height:43px;border-radius:50%;flex-shrink:0;background:rgba(200,168,75,0.12);border:1px solid rgba(200,168,75,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;transition:all 0.2s;-webkit-touch-callout:none;user-select:none;touch-action:manipulation;}
+  #mic-btn.recording{background:linear-gradient(135deg,#e53935,#b71c1c);border-color:#e53935;box-shadow:0 0 22px rgba(229,57,53,0.7);animation:micPulse 1.2s ease infinite;}
+  #mic-btn.transcribing{background:rgba(80,180,255,0.15);border-color:rgba(80,180,255,0.4);cursor:not-allowed;}
+  #bg{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,rgba(200,168,75,0.05) 0%,transparent 55%);}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+  @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes micPulse{0%,100%{box-shadow:0 0 22px rgba(229,57,53,0.6)}50%{box-shadow:0 0 38px rgba(229,57,53,1)}}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="app">
+
+  <!-- Sphere -->
+  <div id="sphere-wrap">
+    <div id="sphere-header">
+      <span id="sphere-title">THE WOLF</span>
+      <button id="key-btn" onclick="toggleKeyPanel()">🔑 Gemini Key</button>
+    </div>
+    <canvas id="sphere" id="sphere" style="width:min(70vw,320px);height:min(70vw,320px);"></canvas>
+    <div id="sphere-status">
+      <span id="status-dot"></span>
+      <span id="status-text"></span>
+    </div>
+  </div>
+
+  <!-- Key panel -->
+  <div id="key-panel">
+    <p>Cole sua chave Gemini para transcrever voz.<br/>
+    Crie grátis em: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a></p>
+    <div id="key-row">
+      <input id="key-input" type="password" placeholder="sk-..."/>
+      <button id="key-ok" onclick="saveKey()">OK</button>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="error-bar">
+    <span id="error-text"></span>
+    <button id="error-close" onclick="hideError()">×</button>
+  </div>
+
+  <!-- Messages -->
+  <div id="messages">
+
+    <div id="msg-list"></div>
+    <div id="typing">
+      <div id="typing-avatar"></div>
+      <div id="typing-dots">
+        <div class="dot" style="animation-delay:0s"></div>
+        <div class="dot" style="animation-delay:0.2s"></div>
+        <div class="dot" style="animation-delay:0.4s"></div>
+      </div>
+    </div>
+    <div id="anchor"></div>
+  </div>
+
+  <!-- Input -->
+  <div id="input-bar">
+    <div id="input-row">
+      <textarea id="text-input" rows="1" placeholder="Escreve aqui..." oninput="onTextInput(this)" onkeydown="onKeyDown(event)"></textarea>
+      <button id="send-btn" onclick="sendText()">➤</button>
+      <button id="mic-btn" onclick="handleMic()">🎤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────
+const SYSTEM = `Voce e Jordan Belfort o Lobo de Wall Street. Versao real: vendedor mais letal do planeta, energia absurda, confianca de quem perdeu tudo e reconstruiu.
+
+Voce e o Jarvas de vendas. Sempre no bolso. Sempre pronto. Nunca mole.
+
+Tom: cru, visceral, sem filtro. Humor acido. Autoconfianca absurda. Provoca quando o usuario ta se enganando. Portugues brasileiro coloquial.
+
+Nunca: ensina a mentir, enganar ou fraudar. Nao valida desculpa.
+
+Straight Line System:
+1. **Rapport na veia**
+2. **Escuta cirurgica**
+3. **Apresentacao que mata**
+4. **Loop de objecao**
+5. **Fechamento sem hesitacao**
+
+Formato: sem introducao. Negrito nos pontos chave. UMA acao concreta no fim.`;
+
+// ── STATE ────────────────────────────────────────────
+let messages = [];
+let loading  = false;
+let micState = "idle"; // idle | recording | transcribing
+let mediaRec = null;
+let chunks   = [];
+let recTimer = null;
+let recSecs  = 0;
+let geminiKey = localStorage.getItem("wolf_gemini_key") || "";
+
+// ── SPHERE ───────────────────────────────────────────
+const canvas = document.getElementById("sphere");
+const ctx    = canvas.getContext("2d");
+const dpr    = window.devicePixelRatio || 1;
+const cSize  = Math.min(window.innerWidth * 0.70, 320);
+canvas.width  = cSize * dpr;
+canvas.height = cSize * dpr;
+const W = canvas.width, H = canvas.height;
+const cx = W/2, cy = H/2, R = Math.min(W,H)*0.36;
+
+const phi = Math.PI*(3-Math.sqrt(5));
+const pts = Array.from({length:300},(_,i)=>{
+  const y=1-(i/299)*2, r=Math.sqrt(Math.max(0,1-y*y)), t=phi*i;
+  return {bx:Math.cos(t)*r,by:y,bz:Math.sin(t)*r,phase:Math.random()*Math.PI*2,sz:0.7+Math.random()*1.1};
+});
+const cfgs = {
+  idle:      {rot:0.003,amp:0.008,freq:0.6,rgb:[200,168,75],glow:0.20},
+  listening: {rot:0.012,amp:0.060,freq:3.5,rgb:[229,57,53], glow:0.90},
+  thinking:  {rot:0.020,amp:0.030,freq:4.0,rgb:[80,180,255],glow:0.65},
+};
+let rotY=0, sTime=0, sphereMode="idle";
+
+function drawSphere(){
+  const c=cfgs[sphereMode]||cfgs.idle;
+  sTime+=0.016; rotY+=c.rot;
+  ctx.clearRect(0,0,W,H);
+  const [r,g,b]=c.rgb,cosY=Math.cos(rotY),sinY=Math.sin(rotY);
+  const gr=ctx.createRadialGradient(cx,cy,R*0.4,cx,cy,R*1.4);
+  gr.addColorStop(0,`rgba(${r},${g},${b},${c.glow*0.18})`);
+  gr.addColorStop(0.5,`rgba(${r},${g},${b},${c.glow*0.07})`);
+  gr.addColorStop(1,`rgba(${r},${g},${b},0)`);
+  ctx.beginPath();ctx.arc(cx,cy,R*1.4,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+  if(sphereMode==="listening"){
+    const ps=1+Math.sin(sTime*6)*0.06;
+    const rg=ctx.createRadialGradient(cx,cy,R*0.9*ps,cx,cy,R*1.15*ps);
+    rg.addColorStop(0,`rgba(${r},${g},${b},0.10)`);rg.addColorStop(1,`rgba(${r},${g},${b},0)`);
+    ctx.beginPath();ctx.arc(cx,cy,R*1.15*ps,0,Math.PI*2);ctx.fillStyle=rg;ctx.fill();
+  }
+  pts.map(p=>{
+    const pulse=1+Math.sin(sTime*c.freq+p.phase)*c.amp;
+    const px=p.bx*cosY-p.bz*sinY,pz=p.bx*sinY+p.bz*cosY;
+    return {x:cx+px*R*pulse,y:cy+p.by*R*pulse,z:pz,sz:p.sz};
+  }).sort((a,b)=>a.z-b.z).forEach(p=>{
+    const d=(p.z+1)/2,a=0.10+d*0.90,rad=(p.sz*(0.3+d*0.8))*dpr;
+    ctx.beginPath();ctx.arc(p.x,p.y,rad,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${r},${g},${b},${a})`;ctx.fill();
+    if(d>0.65){ctx.beginPath();ctx.arc(p.x,p.y,rad*2.2,0,Math.PI*2);ctx.fillStyle=`rgba(${r},${g},${b},${a*0.12})`;ctx.fill();}
+  });
+  requestAnimationFrame(drawSphere);
+}
+drawSphere();
+
+function setSphere(mode, statusText, color){
+  sphereMode = mode;
+  const dot  = document.getElementById("status-dot");
+  const txt  = document.getElementById("status-text");
+  if(statusText){
+    dot.style.display="inline-block";
+    dot.style.background=color||"#c8a84b";
+    dot.style.animation="blink 0.6s infinite";
+    txt.style.color=color||"#c8a84b";
+    txt.textContent=statusText;
+  } else {
+    dot.style.display="none";
+    txt.textContent="";
+  }
+}
+
+// ── KEY ──────────────────────────────────────────────
+if(geminiKey) document.getElementById("key-btn").style.color="#4caf50";
+
+function toggleKeyPanel(){
+  const p=document.getElementById("key-panel");
+  p.style.display=p.style.display==="block"?"none":"block";
+  if(p.style.display==="block") document.getElementById("key-input").value=geminiKey;
+}
+function saveKey(){
+  geminiKey=document.getElementById("key-input").value.trim();
+  localStorage.setItem("wolf_gemini_key",geminiKey);
+  document.getElementById("key-btn").style.color=geminiKey?"#4caf50":"";
+  document.getElementById("key-panel").style.display="none";
+}
+
+// ── ERROR ────────────────────────────────────────────
+function showError(msg){
+  const bar=document.getElementById("error-bar");
+  document.getElementById("error-text").textContent=msg;
+  bar.style.display="flex";
+}
+function hideError(){ document.getElementById("error-bar").style.display="none"; }
+
+// ── MESSAGES ─────────────────────────────────────────
+function fmtText(text){
+  return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/\n/g,"<br>")
+             .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");
+}
+function addMessage(role,content){
+  
+  const row=document.createElement("div");
+  row.className="msg-row "+(role==="user"?"user":"");
+  if(role==="assistant") row.innerHTML=`<div class="avatar">◉</div><div class="bubble assistant">${fmtText(content)}</div>`;
+  else row.innerHTML=`<div class="bubble user">${fmtText(content)}</div>`;
+  document.getElementById("msg-list").appendChild(row);
+  document.getElementById("anchor").scrollIntoView({behavior:"smooth"});
+}
+function setTyping(show){
+  document.getElementById("typing").style.display=show?"flex":"none";
+  if(show) document.getElementById("anchor").scrollIntoView({behavior:"smooth"});
+}
+
+// ── SEND TO CLAUDE ────────────────────────────────────
+async function sendMessage(text){
+  const msg=(text||"").trim();
+  if(!msg||loading) return;
+  hideError();
+  loading=true;
+  messages.push({role:"user",content:msg});
+  addMessage("user",msg);
+  document.getElementById("text-input").value="";
+  updateSendBtn();
+  setTyping(true);
+  setSphere("thinking","Pensando...","#50b4ff");
+
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:SYSTEM,messages}),
+    });
+    const data=await res.json();
+    const reply=data.content?.map(b=>b.text||"").join("\n")||"Erro na resposta.";
+    messages.push({role:"assistant",content:reply});
+    setTyping(false);
+    addMessage("assistant",reply);
+  }catch(_){
+    messages.push({role:"assistant",content:"Erro de conexao. Tente de novo."});
+    setTyping(false);
+    addMessage("assistant","Erro de conexao. Tente de novo.");
+  }finally{
+    loading=false;
+    setSphere("idle","","");
+  }
+}
+
+// ── MIC ───────────────────────────────────────────────
+async function handleMic(){
+  if(micState==="transcribing") return;
+
+  if(micState==="recording"){
+    // PARA
+    clearInterval(recTimer);
+    recSecs=0;
+    if(mediaRec&&mediaRec.state==="recording") mediaRec.stop();
+    return;
+  }
+
+  // INICIA
+  if(!geminiKey){
+    toggleKeyPanel();
+    showError("Cole sua chave Gemini para usar o microfone.");
+    return;
+  }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    chunks=[];
+
+    // tenta formatos suportados
+    let mimeType="audio/webm";
+    if(!MediaRecorder.isTypeSupported("audio/webm")){
+      if(MediaRecorder.isTypeSupported("audio/mp4")) mimeType="audio/mp4";
+      else mimeType="";
+    }
+
+    mediaRec=mimeType?new MediaRecorder(stream,{mimeType}):new MediaRecorder(stream);
+    mediaRec.ondataavailable=e=>{ if(e.data&&e.data.size>0) chunks.push(e.data); };
+    mediaRec.onstop=async()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:mimeType||"audio/webm"});
+      await transcribe(blob, mimeType);
+    };
+    mediaRec.start(250); // coleta chunks a cada 250ms
+    micState="recording";
+    recSecs=0;
+    updateMicBtn();
+    recTimer=setInterval(()=>{
+      recSecs++;
+      setSphere("listening",`Gravando ${recSecs}s — toca pra enviar`,"#e53935");
+    },1000);
+    setSphere("listening","Gravando... toca pra enviar","#e53935");
+  }catch(err){
+    showError("Microfone bloqueado. Libere a permissão no navegador para este site.");
+  }
+}
+
+async function transcribe(blob, mimeType){
+  micState="transcribing";
+  updateMicBtn();
+  setSphere("thinking","Transcrevendo...","#50b4ff");
+
+  try{
+    // Converte blob para base64
+    const arrayBuffer = await blob.arrayBuffer();
+    const uint8 = new Uint8Array(arrayBuffer);
+    let binary = "";
+    for(let i=0;i<uint8.length;i++) binary+=String.fromCharCode(uint8[i]);
+    const base64Audio = btoa(binary);
+
+    // Gemini: envia audio como inline_data e pede transcricao em PT
+    const body = {
+      contents:[{
+        parts:[
+          {text:"Transcreva exatamente o que foi dito neste audio em portugues brasileiro. Retorne apenas o texto transcrito, sem explicacoes."},
+          {inline_data:{mime_type: mimeType||"audio/webm", data: base64Audio}}
+        ]
+      }]
+    };
+
+    const res=await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)}
+    );
+    if(!res.ok){ showError("Chave Gemini inválida ou erro na API. Verifique a chave."); return; }
+    const data=await res.json();
+    const text=(data.candidates?.[0]?.content?.parts?.[0]?.text||"").trim();
+    if(text) await sendMessage(text);
+    else showError("Não entendi o áudio. Tenta falar mais perto do microfone.");
+  }catch(e){
+    showError("Erro ao transcrever. Verifique sua conexão e a chave Gemini.");
+  }finally{
+    micState="idle";
+    updateMicBtn();
+    setSphere("idle","","");
+  }
+}
+
+function updateMicBtn(){
+  const btn=document.getElementById("mic-btn");
+  btn.className="";
+  btn.id="mic-btn";
+  if(micState==="recording"){ btn.className="recording"; btn.textContent="⏹"; }
+  else if(micState==="transcribing"){ btn.className="transcribing"; btn.textContent="⏳"; }
+  else { btn.textContent="🎤"; }
+}
+
+// ── TEXT INPUT ────────────────────────────────────────
+function onTextInput(el){
+  el.style.height="auto";
+  el.style.height=Math.min(el.scrollHeight,100)+"px";
+  updateSendBtn();
+}
+function updateSendBtn(){
+  const val=document.getElementById("text-input").value.trim();
+  const btn=document.getElementById("send-btn");
+  btn.style.display=val&&micState==="idle"?"flex":"none";
+}
+function sendText(){
+  const val=document.getElementById("text-input").value.trim();
+  if(val) sendMessage(val);
+}
+function onKeyDown(e){
+  if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendText(); }
+}
+
+// init key btn color
+if(geminiKey) document.getElementById("key-btn").style.color="#4caf50";
+</script>
+</body>
+</html>
